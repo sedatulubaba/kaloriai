@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0e0f11;
+    --surface: #16181c;
+    --border: #2a2d35;
+    --accent: #c8f060;
+    --accent2: #60d4f0;
+    --text: #f0f0ea;
+    --muted: #6b7280;
+    --danger: #f06060;
+    --radius: 12px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .app {
+    max-width: 680px;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+  }
+
+  header {
+    margin-bottom: 2.5rem;
+  }
+
+  .header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    color: var(--text);
+  }
+
+  .logo span { color: var(--accent); }
+
+  .subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  /* Header icon buttons */
+  .header-icons {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    margin-top: 2px;
+  }
+
+  .cal-btn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .cal-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .cal-btn svg { width: 18px; height: 18px; }
+
+  /* Date tabs */
+  .date-nav {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+  .date-nav::-webkit-scrollbar { display: none; }
+
+  .date-tab {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--muted);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .date-tab.active {
+    background: var(--accent);
+    color: #0e0f11;
+    border-color: var(--accent);
+    font-weight: 500;
+  }
+  .date-tab:hover:not(.active) {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  /* Summary cards */
+  .summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 1.5rem;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+  }
+
+  .card-label {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+
+  .card-value {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+  }
+
+  .card-value.green { color: var(--accent); }
+  .card-value.blue { color: var(--accent2); }
+  .card-value.red { color: var(--danger); }
+
+  .card-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* Progress bars */
+  .progress-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .progress-row {
+    margin-bottom: 12px;
+  }
+  .progress-row:last-child { margin-bottom: 0; }
+
+  .progress-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .progress-track {
+    height: 6px;
+    background: var(--border);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .fill-green { background: var(--accent); }
+  .fill-blue { background: var(--accent2); }
+  .fill-red { background: var(--danger); }
+
+  /* Input */
+  .input-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .input-label {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+
+  .input-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .food-input {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+
+  .food-input:focus {
+    border-color: var(--accent);
+  }
+
+  .food-input::placeholder { color: var(--muted); }
+
+  .add-btn {
+    background: var(--accent);
+    color: #0e0f11;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 18px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+    white-space: nowrap;
+  }
+
+  .add-btn:hover { opacity: 0.88; }
+  .add-btn:active { transform: scale(0.97); }
+  .add-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .thinking {
+    font-size: 11px;
+    color: var(--accent);
+    margin-top: 8px;
+    min-height: 16px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .dot-anim::after {
+    content: '';
+    animation: dots 1.2s infinite;
+  }
+
+  @keyframes dots {
+    0% { content: '.'; }
+    33% { content: '..'; }
+    66% { content: '...'; }
+  }
+
+  /* Food list */
+  .food-list-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .list-header {
+    padding: 12px 1.25rem;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    display: grid;
+    grid-template-columns: 1fr 70px 70px 32px;
+    gap: 8px;
+  }
+
+  .food-item {
+    display: grid;
+    grid-template-columns: 1fr 70px 70px 32px;
+    gap: 8px;
+    padding: 12px 1.25rem;
+    border-bottom: 1px solid var(--border);
+    align-items: center;
+    animation: slideIn 0.2s ease;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .food-item:last-child { border-bottom: none; }
+
+  .food-name {
+    font-size: 13px;
+    color: var(--text);
+  }
+
+  .food-kcal {
+    font-size: 12px;
+    color: var(--accent);
+    text-align: right;
+  }
+
+  .food-protein {
+    font-size: 12px;
+    color: var(--accent2);
+    text-align: right;
+  }
+
+  .del-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px;
+    text-align: center;
+    transition: color 0.15s;
+  }
+  .del-btn:hover { color: var(--danger); }
+
+  .empty-state {
+    padding: 2.5rem;
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+  }
+
+  .empty-icon {
+    font-size: 28px;
+    margin-bottom: 8px;
+    opacity: 0.4;
+  }
+
+  .error-msg {
+    font-size: 11px;
+    color: var(--danger);
+    margin-top: 8px;
+  }
+
+  /* ───── MODAL ───── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    z-index: 100;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 1rem;
+    overflow-y: auto;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.open {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .modal-content {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 520px;
+    margin: auto;
+    overflow: hidden;
+    transform: translateY(12px);
+    transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal-content {
+    transform: translateY(0);
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .modal-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 6px;
+    transition: color 0.15s, background 0.15s;
+  }
+  .modal-close:hover { color: var(--text); background: var(--border); }
+
+  .modal-body {
+    padding: 1.5rem;
+  }
+
+  /* Goals form */
+  .goals-section {
+    margin-bottom: 2rem;
+  }
+
+  .section-title {
+    font-size: 10px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 1rem;
+  }
+
+  .goals-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .goal-field label {
+    display: block;
+    font-size: 10px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .goal-input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .goal-input:focus { border-color: var(--accent); }
+
+  .save-goals-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #0e0f11;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .save-goals-btn:hover { opacity: 0.88; }
+
+  .save-success {
+    font-size: 11px;
+    color: var(--accent);
+    margin-top: 8px;
+    min-height: 16px;
+    text-align: center;
+  }
+
+  /* History list */
+  .history-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+  }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s;
+    margin-bottom: 4px;
+  }
+  .history-item:hover { background: var(--bg); }
+
+  .history-date {
+    font-size: 12px;
+    color: var(--text);
+  }
+  .history-date-sub {
+    font-size: 10px;
+    color: var(--muted);
+    margin-top: 2px;
+  }
+
+  .history-stats {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .history-stat {
+    font-size: 11px;
+    text-align: right;
+  }
+  .history-stat .val { font-weight: 500; }
+  .history-stat .lbl { color: var(--muted); font-size: 9px; }
+
+  .history-kcal { color: var(--accent); }
+  .history-protein { color: var(--accent2); }
+
+  .history-arrow {
+    color: var(--muted);
+    font-size: 12px;
+    margin-left: 8px;
+  }
+
+  .history-empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 12px;
+    padding: 1.5rem 0;
+  }
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="header-row">
+      <div>
+        <div class="logo">KALORI<span>.</span>AI</div>
+        <div class="subtitle">Yapay zeka destekli beslenme takibi</div>
+      </div>
+      <div class="header-icons">
+        <button class="cal-btn" onclick="openSettings()" title="Hedefler">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </button>
+        <button class="cal-btn" onclick="openModal()" title="Geçmiş">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="date-nav" id="dateTabs"></div>
+
+  <div class="summary">
+    <div class="card">
+      <div class="card-label">Kalori</div>
+      <div class="card-value green" id="totalKcal">0</div>
+      <div class="card-sub">kcal alındı</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Protein</div>
+      <div class="card-value blue" id="totalProtein">0 gr</div>
+      <div class="card-sub">alındı</div>
+    </div>
+    <div class="card">
+      <div class="card-label">Kalan</div>
+      <div class="card-value" id="remaining" style="color: var(--accent);">0</div>
+      <div class="card-sub">kcal hedef</div>
+    </div>
+  </div>
+
+  <div class="progress-section">
+    <div class="progress-row">
+      <div class="progress-header">
+        <span>Kalori</span>
+        <span id="kcalPct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill fill-green" id="kcalBar" style="width:0%"></div>
+      </div>
+    </div>
+    <div class="progress-row">
+      <div class="progress-header">
+        <span id="proteinLabel">Protein (hedef: — gr)</span>
+        <span id="proteinPct">0%</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill fill-blue" id="proteinBar" style="width:0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="input-section">
+    <div class="input-label">Yemek ekle</div>
+    <div class="input-row">
+      <input class="food-input" id="foodInput" type="text" placeholder='örn: "2 yumurta" veya "1 porsiyon tavuk"' />
+      <button class="add-btn" id="addBtn" onclick="addFood()">Ekle ↗</button>
+    </div>
+    <div class="thinking" id="thinkingMsg"></div>
+    <div class="error-msg" id="errorMsg"></div>
+  </div>
+
+  <div class="food-list-section">
+    <div class="list-header">
+      <span>Yemek</span>
+      <span style="text-align:right">Kalori</span>
+      <span style="text-align:right">Protein</span>
+      <span></span>
+    </div>
+    <div id="foodList"></div>
+  </div>
+</div>
+
+<!-- ───── SETTINGS MODAL ───── -->
+<div class="modal-overlay" id="settingsModal" onclick="handleSettingsOverlayClick(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title">Kişisel Hedefler</div>
+      <button class="modal-close" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="goals-section">
+        <div class="section-title">Günlük hedeflerini ayarla</div>
+        <div class="goals-grid">
+          <div class="goal-field">
+            <label>Günlük Kalori (kcal)</label>
+            <input class="goal-input" id="goalKcal" type="number" min="500" max="10000" placeholder="örn: 2000" />
+          </div>
+          <div class="goal-field">
+            <label>Günlük Protein (gr)</label>
+            <input class="goal-input" id="goalProtein" type="number" min="10" max="500" placeholder="örn: 150" />
+          </div>
+        </div>
+        <button class="save-goals-btn" onclick="saveGoals()">Kaydet</button>
+        <div class="save-success" id="saveSuccess"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ───── MODAL ───── -->
+<div class="modal-overlay" id="calModal" onclick="handleOverlayClick(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title">Geçmiş</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <!-- History -->
+      <div class="history-section">
+        <div class="section-title">Tüm Geçmiş</div>
+        <div id="historyList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+// GEMINI_API_KEY config.js'den geliyor
+
+// ─── State ───
+let kcalTarget = 2533;
+let proteinTarget = 127;
+let allData = {};
+let currentDate = todayKey();
+
+// ─── Init: load from localStorage ───
+(function init() {
+  const savedGoals = localStorage.getItem('kalorai_goals');
+  if (savedGoals) {
+    const g = JSON.parse(savedGoals);
+    kcalTarget = g.kcal || 2533;
+    proteinTarget = g.protein || 127;
+  }
+  const savedData = localStorage.getItem('kalorai_data');
+  if (savedData) {
+    allData = JSON.parse(savedData);
+  }
+})();
+
+function saveData() {
+  localStorage.setItem('kalorai_data', JSON.stringify(allData));
+}
+
+
+// ─── Date helpers ───
+function todayKey() {
+  return new Date().toISOString().split('T')[0];
+}
+
+function formatDateLabel(key) {
+  const d = new Date(key + 'T12:00:00');
+  const days = ['Paz','Pzt','Sal','Çar','Per','Cum','Cmt'];
+  const months = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+  return `${days[d.getDay()]} ${d.getDate()} ${months[d.getMonth()]}`;
+}
+
+function formatDateFull(key) {
+  const d = new Date(key + 'T12:00:00');
+  const days = ['Pazar','Pazartesi','Salı','Çarşamba','Perşembe','Cuma','Cumartesi'];
+  const months = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+  return `${days[d.getDay()]}, ${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+function getTabDates() {
+  const today = new Date();
+  const result = [];
+  for (let i = 7; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    result.push(d.toISOString().split('T')[0]);
+  }
+  return result;
+}
+
+// ─── Render ───
+function renderDateTabs() {
+  const tabs = document.getElementById('dateTabs');
+  const dates = getTabDates();
+  tabs.innerHTML = '';
+  dates.forEach(key => {
+    const btn = document.createElement('button');
+    btn.className = 'date-tab' + (key === currentDate ? ' active' : '');
+    if (key === todayKey()) {
+      btn.textContent = 'Bugün';
+    } else if (key === getPrevKey(todayKey(), 1)) {
+      btn.textContent = 'Dün';
+    } else {
+      btn.textContent = formatDateLabel(key);
+    }
+    btn.onclick = () => { currentDate = key; renderAll(); };
+    tabs.appendChild(btn);
+  });
+  // scroll active tab into view
+  setTimeout(() => {
+    const active = tabs.querySelector('.active');
+    if (active) active.scrollIntoView({ inline: 'nearest', block: 'nearest' });
+  }, 0);
+}
+
+function getPrevKey(key, n) {
+  const d = new Date(key + 'T12:00:00');
+  d.setDate(d.getDate() - n);
+  return d.toISOString().split('T')[0];
+}
+
+function getFoods() {
+  return allData[currentDate] || [];
+}
+
+function renderAll() {
+  renderDateTabs();
+  renderFoodList();
+  renderSummary();
+}
+
+function renderSummary() {
+  const foods = getFoods();
+  const kcal = foods.reduce((s, f) => s + f.kcal, 0);
+  const protein = foods.reduce((s, f) => s + f.protein, 0);
+  const remaining = kcalTarget - kcal;
+
+  document.getElementById('totalKcal').textContent = kcal;
+  document.getElementById('totalProtein').textContent = protein + ' gr';
+
+  const remEl = document.getElementById('remaining');
+  remEl.textContent = remaining;
+  remEl.style.color = remaining < 0 ? 'var(--danger)' : remaining < 300 ? '#f0b060' : 'var(--accent)';
+
+  const kcalPct = Math.min(100, Math.round(kcal / kcalTarget * 100));
+  const proteinPct = Math.min(100, Math.round(protein / proteinTarget * 100));
+
+  document.getElementById('kcalPct').textContent = kcalPct + '%';
+  document.getElementById('proteinPct').textContent = proteinPct + '%';
+  document.getElementById('kcalBar').style.width = kcalPct + '%';
+  document.getElementById('proteinBar').style.width = proteinPct + '%';
+  document.getElementById('proteinLabel').textContent = `Protein (hedef: ${proteinTarget} gr)`;
+
+  document.getElementById('kcalBar').className =
+    kcal > kcalTarget ? 'progress-fill fill-red' : 'progress-fill fill-green';
+}
+
+function renderFoodList() {
+  const list = document.getElementById('foodList');
+  const foods = getFoods();
+  if (foods.length === 0) {
+    list.innerHTML = `<div class="empty-state"><div class="empty-icon">🍽</div><div>Henüz yemek eklenmedi</div></div>`;
+    return;
+  }
+  list.innerHTML = '';
+  foods.forEach((f, i) => {
+    const div = document.createElement('div');
+    div.className = 'food-item';
+    div.innerHTML = `
+      <span class="food-name">${f.name}</span>
+      <span class="food-kcal">${f.kcal} kcal</span>
+      <span class="food-protein">${f.protein} gr</span>
+      <button class="del-btn" onclick="removeFood(${i})">✕</button>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function removeFood(idx) {
+  if (!allData[currentDate]) return;
+  allData[currentDate].splice(idx, 1);
+  saveData();
+  renderAll();
+}
+
+// ─── Add food ───
+async function addFood() {
+  const input = document.getElementById('foodInput');
+  const btn = document.getElementById('addBtn');
+  const thinking = document.getElementById('thinkingMsg');
+  const errorEl = document.getElementById('errorMsg');
+  const query = input.value.trim();
+  if (!query) return;
+
+  btn.disabled = true;
+  errorEl.textContent = '';
+  thinking.innerHTML = '<span class="dot-anim">AI hesaplıyor</span>';
+
+  const prompt = `Sen bir beslenme uzmanısın. Kullanıcı bir şey yazar. Eğer girilen şey bir yiyecek veya içecekse, SADECE şu JSON formatında yanıt ver:
+{"name": "yemek adı (kısa, Türkçe)", "kcal": 123, "protein": 12}
+
+Eğer girilen şey bir yiyecek veya içecek DEĞİLSE (örneğin rastgele kelimeler, isimler, anlamsız metin), SADECE şunu döndür:
+{"valid": false}
+
+Türkiye standart porsiyonlarını kullan. Başka hiçbir şey yazma, sadece JSON.
+
+Kullanıcı girişi: ${query}`;
+
+  try {
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { maxOutputTokens: 150, temperature: 0.1 }
+        })
+      }
+    );
+
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(data.error.message || 'API hatası');
+    }
+
+    const text = data.candidates[0].content.parts[0].text.trim();
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    if (parsed.valid === false) {
+      thinking.innerHTML = '';
+      errorEl.textContent = 'Bu bir yiyecek veya içecek değil. Lütfen geçerli bir yemek girin.';
+      btn.disabled = false;
+      input.focus();
+      return;
+    }
+
+    if (!allData[currentDate]) allData[currentDate] = [];
+    allData[currentDate].push({
+      name: parsed.name || query,
+      kcal: Math.round(parsed.kcal),
+      protein: Math.round(parsed.protein)
+    });
+
+    saveData();
+    input.value = '';
+    thinking.innerHTML = '';
+    renderAll();
+  } catch (e) {
+    thinking.innerHTML = '';
+    errorEl.textContent = `Hata: ${e.message}`;
+    console.error('Gemini API hatası:', e);
+  }
+
+  btn.disabled = false;
+  input.focus();}
+
+document.getElementById('foodInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') addFood();
+});
+
+// ─── Settings Modal ───
+function openSettings() {
+  document.getElementById('goalKcal').value = kcalTarget;
+  document.getElementById('goalProtein').value = proteinTarget;
+  document.getElementById('saveSuccess').textContent = '';
+  document.getElementById('settingsModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeSettings() {
+  document.getElementById('settingsModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function handleSettingsOverlayClick(e) {
+  if (e.target === document.getElementById('settingsModal')) closeSettings();
+}
+
+// ─── Calendar Modal ───
+function openModal() {
+  renderHistoryList();
+  document.getElementById('calModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal() {
+  document.getElementById('calModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('calModal')) closeModal();
+}
+
+// close on Escape
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); closeSettings(); }
+});
+
+function saveGoals() {
+  const kInput = document.getElementById('goalKcal');
+  const pInput = document.getElementById('goalProtein');
+  const newKcal = parseInt(kInput.value);
+  const newProtein = parseInt(pInput.value);
+
+  if (!newKcal || newKcal < 500 || newKcal > 10000) {
+    kInput.style.borderColor = 'var(--danger)';
+    setTimeout(() => kInput.style.borderColor = '', 1500);
+    return;
+  }
+  if (!newProtein || newProtein < 10 || newProtein > 500) {
+    pInput.style.borderColor = 'var(--danger)';
+    setTimeout(() => pInput.style.borderColor = '', 1500);
+    return;
+  }
+
+  kcalTarget = newKcal;
+  proteinTarget = newProtein;
+  localStorage.setItem('kalorai_goals', JSON.stringify({ kcal: kcalTarget, protein: proteinTarget }));
+
+  const msg = document.getElementById('saveSuccess');
+  msg.textContent = '✓ Hedefler kaydedildi';
+  setTimeout(() => msg.textContent = '', 2500);
+
+  renderSummary();
+}
+
+function renderHistoryList() {
+  const container = document.getElementById('historyList');
+  const today = todayKey();
+
+  // get all dates that have food entries, sorted descending
+  const allDates = Object.keys(allData)
+    .filter(k => allData[k] && allData[k].length > 0)
+    .sort((a, b) => b.localeCompare(a));
+
+  if (allDates.length === 0) {
+    container.innerHTML = '<div class="history-empty">Henüz kayıtlı gün yok</div>';
+    return;
+  }
+
+  container.innerHTML = '';
+  allDates.forEach(key => {
+    const foods = allData[key];
+    const kcal = foods.reduce((s, f) => s + f.kcal, 0);
+    const protein = foods.reduce((s, f) => s + f.protein, 0);
+
+    let dateLabel;
+    if (key === today) dateLabel = 'Bugün';
+    else if (key === getPrevKey(today, 1)) dateLabel = 'Dün';
+    else dateLabel = formatDateLabel(key);
+
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.onclick = () => {
+      currentDate = key;
+      closeModal();
+      renderAll();
+    };
+    div.innerHTML = `
+      <div>
+        <div class="history-date">${dateLabel}</div>
+        <div class="history-date-sub">${formatDateFull(key)}</div>
+      </div>
+      <div class="history-stats">
+        <div class="history-stat history-kcal">
+          <div class="val">${kcal}</div>
+          <div class="lbl">kcal</div>
+        </div>
+        <div class="history-stat history-protein">
+          <div class="val">${protein} gr</div>
+          <div class="lbl">protein</div>
+        </div>
+        <div class="history-arrow">›</div>
+      </div>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ─── Start ───
+renderAll();
+</script>
+</body>
+</html>
