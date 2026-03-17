@@ -873,7 +873,7 @@ Kullanıcı girişi: ${query}`;
     const response = await fetch('/.netlify/functions/ask', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt })
+      body: JSON.stringify({ prompt, query })
     });
 
     const data = await response.json();
