@@ -894,12 +894,19 @@ Kullanıcı girişi: ${query}`;
       return;
     }
 
+    const kcal = Math.round(parsed.kcal);
+    const protein = Math.round(parsed.protein);
+
+    if (!parsed.name || isNaN(kcal) || isNaN(protein)) {
+      thinking.innerHTML = '';
+      errorEl.textContent = 'Besin değerleri hesaplanamadı. Lütfen tekrar deneyin.';
+      btn.disabled = false;
+      input.focus();
+      return;
+    }
+
     if (!allData[currentDate]) allData[currentDate] = [];
-    allData[currentDate].push({
-      name: parsed.name || query,
-      kcal: Math.round(parsed.kcal),
-      protein: Math.round(parsed.protein)
-    });
+    allData[currentDate].push({ name: parsed.name, kcal, protein });
 
     saveData();
     input.value = '';
