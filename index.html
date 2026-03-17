@@ -693,9 +693,8 @@
   </div>
 </div>
 
-<script src="config.js"></script>
 <script>
-// GEMINI_API_KEY config.js'den geliyor
+// API anahtarı Netlify environment variable'da, tarayıcıda görünmez
 
 // ─── State ───
 let kcalTarget = 2533;
@@ -871,32 +870,19 @@ Türkiye standart porsiyonlarını kullan. Başka hiçbir şey yazma, sadece JSO
 Kullanıcı girişi: ${query}`;
 
   try {
-    const response = await fetch(
-      'https://api.anthropic.com/v1/messages',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': CLAUDE_API_KEY,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model: 'claude-haiku-4-5-20251001',
-          max_tokens: 150,
-          temperature: 0.1,
-          messages: [{ role: 'user', content: prompt }]
-        })
-      }
-    );
+    const response = await fetch('/.netlify/functions/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt })
+    });
 
     const data = await response.json();
 
     if (data.error) {
-      throw new Error(data.error.message || 'API hatası');
+      throw new Error(data.error || 'API hatası');
     }
 
-    const text = data.content[0].text.trim();
+    const text = data.text.trim();
     const clean = text.replace(/```json|```/g, '').trim();
     const parsed = JSON.parse(clean);
 
