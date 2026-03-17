@@ -26,16 +26,25 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: data.error.message }) };
   }
 
-  // Supabase'e log at (fire & forget)
-  fetch(`${process.env.SUPABASE_URL}/rest/v1/logs`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': process.env.SUPABASE_ANON_KEY,
-      'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`
-    },
-    body: JSON.stringify({ query })
-  }).catch(() => {});
+  // Supabase'e log at
+  try {
+    const logRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/logs`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': process.env.SUPABASE_ANON_KEY,
+        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({ query })
+    });
+    if (!logRes.ok) {
+      const err = await logRes.text();
+      console.error('Supabase log hatası:', err);
+    }
+  } catch (e) {
+    console.error('Supabase bağlantı hatası:', e.message);
+  }
 
   return {
     statusCode: 200,
