@@ -27,6 +27,7 @@ exports.handler = async (event) => {
   }
 
   // Supabase'e log at
+  console.log('SUPABASE_URL:', process.env.SUPABASE_URL);
   try {
     const logRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/logs`, {
       method: 'POST',
