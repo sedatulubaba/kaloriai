@@ -820,29 +820,35 @@ async function loadFromSupabase() {
 }
 
 // ─── Init ───
-(async function init() {
-  loadFromLocalStorage();
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
-    currentUser = session.user;
-    await loadFromSupabase();
-  }
-  renderAll();
-  updateAuthUI();
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    if (event === 'SIGNED_IN') {
+loadFromLocalStorage();
+renderAll();
+
+(async function initSupabase() {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
       currentUser = session.user;
       await loadFromSupabase();
       renderAll();
-      updateAuthUI();
-      closeAuthModal();
-    } else if (event === 'SIGNED_OUT') {
-      currentUser = null;
-      loadFromLocalStorage();
-      renderAll();
-      updateAuthUI();
     }
-  });
+    updateAuthUI();
+    supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_IN') {
+        currentUser = session.user;
+        await loadFromSupabase();
+        renderAll();
+        updateAuthUI();
+        closeAuthModal();
+      } else if (event === 'SIGNED_OUT') {
+        currentUser = null;
+        loadFromLocalStorage();
+        renderAll();
+        updateAuthUI();
+      }
+    });
+  } catch (e) {
+    console.error('Supabase init error:', e);
+  }
 })();
 
 
