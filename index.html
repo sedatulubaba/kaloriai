@@ -558,6 +558,21 @@
     padding: 1.5rem 0;
   }
 
+
+  /* ───── AUTH MODAL ───── */
+  .auth-tab-row { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; }
+  .auth-tab { flex: 1; padding: 10px; background: none; border: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; border-bottom: 2px solid transparent; transition: color 0.15s, border-color 0.15s; }
+  .auth-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .auth-field { margin-bottom: 12px; }
+  .auth-field label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .auth-input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; outline: none; transition: border-color 0.15s; }
+  .auth-input:focus { border-color: var(--accent); }
+  .auth-submit-btn { width: 100%; background: var(--accent); color: #0e0f11; border: none; border-radius: 8px; padding: 11px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 4px; transition: opacity 0.15s; }
+  .auth-submit-btn:hover { opacity: 0.88; }
+  .auth-submit-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .auth-error { font-size: 11px; color: var(--danger); margin-top: 8px; min-height: 16px; }
+  .auth-success { font-size: 11px; color: var(--accent); margin-top: 8px; min-height: 16px; }
+  .sync-badge { font-size: 10px; color: var(--accent2); margin-top: 4px; min-height: 14px; }
 </style>
 </head>
 <body>
@@ -567,8 +582,21 @@
       <div>
         <div class="logo">KALORI<span>.</span>AI</div>
         <div class="subtitle">Yapay zeka destekli beslenme takibi</div>
+        <div class="sync-badge" id="syncBadge"></div>
       </div>
       <div class="header-icons">
+        <button class="cal-btn" id="authBtn" onclick="openAuthModal()" title="Giriş Yap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </button>
+        <a id="adminLink" href="/admin.html" style="display:none;text-decoration:none" class="cal-btn" title="Admin Panel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect>
+            <rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect>
+          </svg>
+        </a>
         <button class="cal-btn" onclick="openSettings()" title="Hedefler">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
@@ -693,17 +721,60 @@
   </div>
 </div>
 
+<!-- ───── AUTH MODAL ───── -->
+<div class="modal-overlay" id="authModal" onclick="handleAuthOverlayClick(event)">
+  <div class="modal-content" onclick="event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-title" id="authModalTitle">Giriş Yap</div>
+      <button class="modal-close" onclick="closeAuthModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="authLoggedIn" style="display:none">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:1.5rem">
+          Giriş yapıldı: <span id="authUserEmail" style="color:var(--text)"></span>
+        </div>
+        <button class="save-goals-btn" onclick="signOut()">Çıkış Yap</button>
+      </div>
+      <div id="authLoggedOut">
+        <div class="auth-tab-row">
+          <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Giriş Yap</button>
+          <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Kayıt Ol</button>
+        </div>
+        <div id="formLogin">
+          <div class="auth-field"><label>E-posta</label><input class="auth-input" id="loginEmail" type="email" placeholder="ornek@email.com" autocomplete="email" /></div>
+          <div class="auth-field"><label>Şifre</label><input class="auth-input" id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password" /></div>
+          <button class="auth-submit-btn" id="loginBtn" onclick="signIn()">Giriş Yap</button>
+          <div class="auth-error" id="loginError"></div>
+        </div>
+        <div id="formRegister" style="display:none">
+          <div class="auth-field"><label>E-posta</label><input class="auth-input" id="regEmail" type="email" placeholder="ornek@email.com" autocomplete="email" /></div>
+          <div class="auth-field"><label>Şifre (en az 6 karakter)</label><input class="auth-input" id="regPassword" type="password" placeholder="••••••••" autocomplete="new-password" /></div>
+          <button class="auth-submit-btn" id="registerBtn" onclick="signUp()">Kayıt Ol</button>
+          <div class="auth-error" id="regError"></div>
+          <div class="auth-success" id="regSuccess"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
-// API anahtarı Netlify environment variable'da, tarayıcıda görünmez
+// ─── Supabase ───
+const SUPABASE_URL = 'https://roswsbtiheyjglkmslpt.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvc3dzYnRpaGVqeWdsa21zbHB0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTU4MDMsImV4cCI6MjA4OTMzMTgwM30.iBUvh7A3kRVwssqjWd6OQK5Gxui0bxXViS_60lmkESI';
+const ADMIN_EMAIL = 'sedatulubaba@gmail.com';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 // ─── State ───
 let kcalTarget = 2533;
 let proteinTarget = 127;
 let allData = {};
 let currentDate = todayKey();
+let currentUser = null;
 
-// ─── Init: load from localStorage ───
-(function init() {
+// ─── localStorage helpers ───
+function loadFromLocalStorage() {
   const savedGoals = localStorage.getItem('kalorai_goals');
   if (savedGoals) {
     const g = JSON.parse(savedGoals);
@@ -711,14 +782,68 @@ let currentDate = todayKey();
     proteinTarget = g.protein || 127;
   }
   const savedData = localStorage.getItem('kalorai_data');
-  if (savedData) {
-    allData = JSON.parse(savedData);
-  }
-})();
+  if (savedData) allData = JSON.parse(savedData);
+}
 
 function saveData() {
   localStorage.setItem('kalorai_data', JSON.stringify(allData));
 }
+
+// ─── Supabase data ───
+async function loadFromSupabase() {
+  setSyncBadge('Buluttan yükleniyor...');
+  const { data: goalsData } = await supabase
+    .from('user_goals').select('kcal, protein')
+    .eq('user_id', currentUser.id).single();
+  if (goalsData) {
+    kcalTarget = goalsData.kcal;
+    proteinTarget = goalsData.protein;
+    localStorage.setItem('kalorai_goals', JSON.stringify({ kcal: kcalTarget, protein: proteinTarget }));
+  }
+  const since = new Date();
+  since.setDate(since.getDate() - 30);
+  const { data: logs } = await supabase
+    .from('food_logs').select('id, date, name, kcal, protein')
+    .eq('user_id', currentUser.id)
+    .gte('date', since.toISOString().split('T')[0])
+    .order('created_at', { ascending: true });
+  if (logs) {
+    allData = {};
+    logs.forEach(row => {
+      const dateStr = String(row.date).slice(0, 10);
+      if (!allData[dateStr]) allData[dateStr] = [];
+      allData[dateStr].push({ id: row.id, name: row.name, kcal: row.kcal, protein: row.protein });
+    });
+    saveData();
+  }
+  setSyncBadge('');
+}
+
+// ─── Init ───
+(async function init() {
+  loadFromLocalStorage();
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session) {
+    currentUser = session.user;
+    await loadFromSupabase();
+  }
+  renderAll();
+  updateAuthUI();
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN') {
+      currentUser = session.user;
+      await loadFromSupabase();
+      renderAll();
+      updateAuthUI();
+      closeAuthModal();
+    } else if (event === 'SIGNED_OUT') {
+      currentUser = null;
+      loadFromLocalStorage();
+      renderAll();
+      updateAuthUI();
+    }
+  });
+})();
 
 
 // ─── Date helpers ───
@@ -839,8 +964,14 @@ function renderFoodList() {
   });
 }
 
-function removeFood(idx) {
+async function removeFood(idx) {
   if (!allData[currentDate]) return;
+  const item = allData[currentDate][idx];
+  if (currentUser && item.id) {
+    const { error } = await supabase.from('food_logs')
+      .delete().eq('id', item.id).eq('user_id', currentUser.id);
+    if (error) { console.error('Delete error:', error); return; }
+  }
   allData[currentDate].splice(idx, 1);
   saveData();
   renderAll();
@@ -870,9 +1001,14 @@ Türkiye standart porsiyonlarını kullan. Başka hiçbir şey yazma, sadece JSO
 Kullanıcı girişi: ${query}`;
 
   try {
+    const fetchHeaders = { 'Content-Type': 'application/json' };
+    if (currentUser) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) fetchHeaders['Authorization'] = `Bearer ${session.access_token}`;
+    }
     const response = await fetch('/.netlify/functions/ask', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: fetchHeaders,
       body: JSON.stringify({ prompt, query })
     });
 
@@ -907,6 +1043,22 @@ Kullanıcı girişi: ${query}`;
 
     if (!allData[currentDate]) allData[currentDate] = [];
     allData[currentDate].push({ name: parsed.name, kcal, protein });
+
+    if (currentUser) {
+      setSyncBadge('Kaydediliyor...');
+      const { data: insertData, error: insertError } = await supabase
+        .from('food_logs').insert({
+          user_id: currentUser.id,
+          date: currentDate,
+          name: parsed.name,
+          kcal,
+          protein
+        }).select('id').single();
+      if (!insertError && insertData) {
+        allData[currentDate][allData[currentDate].length - 1].id = insertData.id;
+      }
+      setSyncBadge('');
+    }
 
     saveData();
     input.value = '';
@@ -961,7 +1113,7 @@ function handleOverlayClick(e) {
 
 // close on Escape
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') { closeModal(); closeSettings(); }
+  if (e.key === 'Escape') { closeModal(); closeSettings(); closeAuthModal(); }
 });
 
 function saveGoals() {
@@ -984,6 +1136,15 @@ function saveGoals() {
   kcalTarget = newKcal;
   proteinTarget = newProtein;
   localStorage.setItem('kalorai_goals', JSON.stringify({ kcal: kcalTarget, protein: proteinTarget }));
+
+  if (currentUser) {
+    supabase.from('user_goals').upsert({
+      user_id: currentUser.id, kcal: kcalTarget, protein: proteinTarget,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' }).then(({ error }) => {
+      if (error) console.error('Goals upsert error:', error);
+    });
+  }
 
   const msg = document.getElementById('saveSuccess');
   msg.textContent = '✓ Hedefler kaydedildi';
@@ -1045,8 +1206,93 @@ function renderHistoryList() {
   });
 }
 
-// ─── Start ───
-renderAll();
+// ─── Auth UI ───
+function updateAuthUI() {
+  const authBtn = document.getElementById('authBtn');
+  const adminLink = document.getElementById('adminLink');
+  if (currentUser) {
+    authBtn.title = `Hesabım (${currentUser.email})`;
+    authBtn.style.borderColor = 'var(--accent)';
+    authBtn.style.color = 'var(--accent)';
+    if (adminLink) adminLink.style.display = currentUser.email === ADMIN_EMAIL ? 'flex' : 'none';
+  } else {
+    authBtn.title = 'Giriş Yap';
+    authBtn.style.borderColor = '';
+    authBtn.style.color = '';
+    if (adminLink) adminLink.style.display = 'none';
+  }
+}
+
+function setSyncBadge(msg) {
+  document.getElementById('syncBadge').textContent = msg;
+}
+
+function openAuthModal() {
+  const loggedIn = document.getElementById('authLoggedIn');
+  const loggedOut = document.getElementById('authLoggedOut');
+  if (currentUser) {
+    loggedIn.style.display = 'block';
+    loggedOut.style.display = 'none';
+    document.getElementById('authUserEmail').textContent = currentUser.email;
+    document.getElementById('authModalTitle').textContent = 'Hesabım';
+  } else {
+    loggedIn.style.display = 'none';
+    loggedOut.style.display = 'block';
+    document.getElementById('authModalTitle').textContent = 'Giriş Yap';
+  }
+  document.getElementById('authModal').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAuthModal() {
+  document.getElementById('authModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function handleAuthOverlayClick(e) {
+  if (e.target === document.getElementById('authModal')) closeAuthModal();
+}
+
+function switchAuthTab(tab) {
+  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+  document.getElementById('formLogin').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('formRegister').style.display = tab === 'register' ? 'block' : 'none';
+}
+
+async function signIn() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const errEl = document.getElementById('loginError');
+  const btn = document.getElementById('loginBtn');
+  errEl.textContent = '';
+  btn.disabled = true;
+  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) errEl.textContent = error.message;
+  btn.disabled = false;
+}
+
+async function signUp() {
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value;
+  const errEl = document.getElementById('regError');
+  const succEl = document.getElementById('regSuccess');
+  const btn = document.getElementById('registerBtn');
+  errEl.textContent = ''; succEl.textContent = '';
+  btn.disabled = true;
+  const { error } = await supabase.auth.signUp({ email, password });
+  if (error) {
+    errEl.textContent = error.message;
+  } else {
+    succEl.textContent = 'Onay e-postası gönderildi! E-postanızı kontrol edin.';
+  }
+  btn.disabled = false;
+}
+
+async function signOut() {
+  await supabase.auth.signOut();
+  closeAuthModal();
+}
 </script>
 
 <div style="position:fixed;bottom:16px;right:16px;font-size:12px;color:rgba(255,255,255,0.4);text-align:right;pointer-events:none;">

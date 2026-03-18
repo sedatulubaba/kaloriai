@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin – KALORI.AI</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0e0f11; --surface: #16181c; --border: #2a2d35;
+    --accent: #c8f060; --accent2: #60d4f0; --text: #f0f0ea;
+    --muted: #6b7280; --danger: #f06060; --radius: 12px;
+  }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; padding: 0; }
+  .app { max-width: 900px; margin: 0 auto; padding: 2rem 1rem 4rem; }
+  .logo { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; letter-spacing: -0.5px; }
+  .logo span { color: var(--accent); }
+  .subtitle { font-size: 12px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
+  header { margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; }
+  .back-btn { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 8px 14px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; text-decoration: none; display: inline-block; transition: color 0.15s, border-color 0.15s; }
+  .back-btn:hover { color: var(--text); border-color: var(--accent); }
+  .stat-row { display: flex; gap: 12px; margin-bottom: 2rem; flex-wrap: wrap; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.5rem; min-width: 140px; }
+  .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px; }
+  .stat-val { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 700; }
+  .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 1.5rem; }
+  .table-title { padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 10px 1.25rem; text-align: left; border-bottom: 1px solid var(--border); font-size: 12px; }
+  tr:last-child td { border-bottom: none; }
+  th { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 400; }
+  .empty { padding: 2rem; text-align: center; color: var(--muted); font-size: 12px; }
+  .login-box { max-width: 360px; margin: 4rem auto; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 2rem; }
+  .login-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; margin-bottom: 1.5rem; }
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  input[type=email], input[type=password] { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 13px; outline: none; }
+  input:focus { border-color: var(--accent); }
+  .login-btn { width: 100%; background: var(--accent); color: #0e0f11; border: none; border-radius: 8px; padding: 11px; font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700; cursor: pointer; margin-top: 4px; }
+  .err { font-size: 11px; color: var(--danger); margin-top: 8px; }
+  #loadingMsg { color: var(--muted); font-size: 12px; padding: 2rem 0; text-align: center; }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Login kutusu (giriş yapılmamışsa) -->
+  <div id="loginBox" style="display:none">
+    <div style="text-align:center;margin-bottom:2rem">
+      <div class="logo">KALORI<span>.</span>AI</div>
+      <div class="subtitle">Admin Paneli</div>
+    </div>
+    <div class="login-box">
+      <div class="login-title">Admin Girişi</div>
+      <div class="field"><label>E-posta</label><input type="email" id="adminEmail" placeholder="admin@email.com" autocomplete="email" /></div>
+      <div class="field"><label>Şifre</label><input type="password" id="adminPassword" placeholder="••••••••" autocomplete="current-password" /></div>
+      <button class="login-btn" id="loginBtn" onclick="adminLogin()">Giriş Yap</button>
+      <div class="err" id="loginErr"></div>
+    </div>
+  </div>
+
+  <!-- Admin içeriği -->
+  <div id="adminContent" style="display:none">
+    <header>
+      <div>
+        <div class="logo">KALORI<span>.</span>AI <span style="color:var(--muted);font-size:14px;font-family:'DM Mono',monospace">/ admin</span></div>
+        <div class="subtitle" id="adminEmailDisplay"></div>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <a href="/" class="back-btn">← Siteye Dön</a>
+        <button class="back-btn" onclick="adminLogout()">Çıkış</button>
+      </div>
+    </header>
+
+    <div id="loadingMsg">Yükleniyor...</div>
+
+    <div id="statsArea" style="display:none">
+      <div class="stat-row">
+        <div class="stat-card">
+          <div class="stat-label">Toplam Kullanıcı</div>
+          <div class="stat-val" id="statUsers" style="color:var(--accent)">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Bugün Sorgu</div>
+          <div class="stat-val" id="statToday" style="color:var(--accent2)">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Toplam Sorgu</div>
+          <div class="stat-val" id="statTotal">—</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Toplam Giriş</div>
+          <div class="stat-val" id="statFoodLogs" style="color:var(--accent)">—</div>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-title">Son Sorgular (100)</div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Zaman</th><th>Kullanıcı</th><th>Sorgu</th></tr></thead>
+            <tbody id="queriesBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="table-card">
+        <div class="table-title">Kullanıcılar & Kayıtlar</div>
+        <div style="overflow-x:auto">
+          <table>
+            <thead><tr><th>Kullanıcı ID</th><th>Toplam Giriş</th><th>Son Giriş</th></tr></thead>
+            <tbody id="usersBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://roswsbtiheyjglkmslpt.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJvc3dzYnRpaGVqeWdsa21zbHB0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM3NTU4MDMsImV4cCI6MjA4OTMzMTgwM30.iBUvh7A3kRVwssqjWd6OQK5Gxui0bxXViS_60lmkESI';
+const ADMIN_EMAIL = 'sedatulubaba@gmail.com';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+(async function() {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    document.getElementById('loginBox').style.display = 'block';
+    return;
+  }
+  if (session.user.email !== ADMIN_EMAIL) {
+    document.body.innerHTML = '<div style="padding:2rem;color:#f06060;font-family:monospace">Erişim reddedildi.</div>';
+    return;
+  }
+  showAdmin(session.user.email);
+  await loadData();
+})();
+
+async function adminLogin() {
+  const email = document.getElementById('adminEmail').value.trim();
+  const password = document.getElementById('adminPassword').value;
+  const errEl = document.getElementById('loginErr');
+  const btn = document.getElementById('loginBtn');
+  errEl.textContent = '';
+  btn.disabled = true;
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error) {
+    errEl.textContent = error.message;
+    btn.disabled = false;
+    return;
+  }
+  if (data.user.email !== ADMIN_EMAIL) {
+    errEl.textContent = 'Bu hesabın admin yetkisi yok.';
+    await supabase.auth.signOut();
+    btn.disabled = false;
+    return;
+  }
+  document.getElementById('loginBox').style.display = 'none';
+  showAdmin(data.user.email);
+  await loadData();
+}
+
+async function adminLogout() {
+  await supabase.auth.signOut();
+  location.reload();
+}
+
+function showAdmin(email) {
+  document.getElementById('adminContent').style.display = 'block';
+  document.getElementById('adminEmailDisplay').textContent = email;
+}
+
+async function loadData() {
+  const today = new Date().toISOString().split('T')[0];
+
+  const [{ data: queries }, { data: logs }] = await Promise.all([
+    supabase.from('queries').select('id, user_id, query, created_at').order('created_at', { ascending: false }).limit(100),
+    supabase.from('food_logs').select('user_id, created_at').order('created_at', { ascending: false })
+  ]);
+
+  document.getElementById('loadingMsg').style.display = 'none';
+  document.getElementById('statsArea').style.display = 'block';
+
+  if (queries) {
+    const todayCount = queries.filter(q => q.created_at.startsWith(today)).length;
+    document.getElementById('statTotal').textContent = queries.length === 100 ? '100+' : queries.length;
+    document.getElementById('statToday').textContent = todayCount;
+
+    const tbody = document.getElementById('queriesBody');
+    if (queries.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" class="empty">Henüz sorgu yok</td></tr>';
+    } else {
+      tbody.innerHTML = queries.map(q => `
+        <tr>
+          <td style="color:var(--muted);white-space:nowrap">${new Date(q.created_at).toLocaleString('tr-TR')}</td>
+          <td style="color:var(--muted);font-size:11px">${q.user_id ? q.user_id.slice(0,8)+'…' : 'misafir'}</td>
+          <td>${escHtml(q.query)}</td>
+        </tr>
+      `).join('');
+    }
+  }
+
+  if (logs) {
+    document.getElementById('statFoodLogs').textContent = logs.length;
+    const byUser = {};
+    logs.forEach(l => {
+      if (!byUser[l.user_id]) byUser[l.user_id] = { count: 0, last: l.created_at };
+      byUser[l.user_id].count++;
+    });
+    const userIds = Object.keys(byUser);
+    document.getElementById('statUsers').textContent = userIds.length;
+    const tbody = document.getElementById('usersBody');
+    if (userIds.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="3" class="empty">Kayıtlı kullanıcı yok</td></tr>';
+    } else {
+      tbody.innerHTML = userIds.map(uid => `
+        <tr>
+          <td style="color:var(--muted);font-size:11px">${uid.slice(0,8)}…</td>
+          <td>${byUser[uid].count}</td>
+          <td style="color:var(--muted)">${new Date(byUser[uid].last).toLocaleString('tr-TR')}</td>
+        </tr>
+      `).join('');
+    }
+  }
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+</script>
+</body>
+</html>

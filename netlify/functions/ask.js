@@ -5,6 +5,28 @@ exports.handler = async (event) => {
 
   const { prompt, query } = JSON.parse(event.body);
 
+  // JWT'den user_id çıkar
+  let userId = null;
+  const authHeader = event.headers['authorization'] || '';
+  if (authHeader.startsWith('Bearer ')) {
+    const token = authHeader.slice(7);
+    try {
+      const userRes = await fetch(`${process.env.SUPABASE_URL}/auth/v1/user`, {
+        headers: {
+          'apikey': process.env.SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      if (userRes.ok) {
+        const userData = await userRes.json();
+        userId = userData.id || null;
+      }
+    } catch (e) {
+      console.error('JWT verify error:', e.message);
+    }
+  }
+
+  // Claude API çağrısı
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -26,26 +48,17 @@ exports.handler = async (event) => {
     return { statusCode: 500, body: JSON.stringify({ error: data.error.message }) };
   }
 
-  // Supabase'e log at
-  console.log('SUPABASE_URL:', process.env.SUPABASE_URL);
-  try {
-    const logRes = await fetch(`${process.env.SUPABASE_URL}/rest/v1/logs`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': process.env.SUPABASE_ANON_KEY,
-        'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({ query })
-    });
-    if (!logRes.ok) {
-      const err = await logRes.text();
-      console.error('Supabase log hatası:', err);
-    }
-  } catch (e) {
-    console.error('Supabase bağlantı hatası:', e.message);
-  }
+  // queries tablosuna log at (fire-and-forget)
+  fetch(`${process.env.SUPABASE_URL}/rest/v1/queries`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': process.env.SUPABASE_ANON_KEY,
+      'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+      'Prefer': 'return=minimal'
+    },
+    body: JSON.stringify({ user_id: userId, query })
+  }).catch(e => console.error('Query log error:', e.message));
 
   return {
     statusCode: 200,
