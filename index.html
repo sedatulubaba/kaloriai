@@ -1012,7 +1012,7 @@ Kullanıcı girişi: ${query}`;
       const { data: { session } } = await supabase.auth.getSession();
       if (session) fetchHeaders['Authorization'] = `Bearer ${session.access_token}`;
     }
-    const response = await fetch('/.netlify/functions/ask', {
+    const response = await fetch('/api/chat', {
       method: 'POST',
       headers: fetchHeaders,
       body: JSON.stringify({ prompt, query })
