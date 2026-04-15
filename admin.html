@@ -124,9 +124,14 @@
 const SUPABASE_URL = 'https://jeesrtujrmlcefjbjipd.supabase.co';
 const SUPABASE_ANON_KEY = 'REPLACE_WITH_NEW_SUPABASE_ANON_KEY';
 const ADMIN_EMAIL = 'sedatulubaba@gmail.com';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_CONFIGURED = SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.startsWith('REPLACE_');
+const supabase = SUPABASE_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 (async function() {
+  if (!supabase) {
+    document.body.innerHTML = '<div style="padding:2rem;color:#f0f0ea;font-family:monospace">Supabase ayari eksik. once anon public key gir.</div>';
+    return;
+  }
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     document.getElementById('loginBox').style.display = 'block';

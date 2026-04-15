@@ -764,7 +764,8 @@
 const SUPABASE_URL = 'https://jeesrtujrmlcefjbjipd.supabase.co';
 const SUPABASE_ANON_KEY = 'REPLACE_WITH_NEW_SUPABASE_ANON_KEY';
 const ADMIN_EMAIL = 'sedatulubaba@gmail.com';
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const SUPABASE_CONFIGURED = SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.startsWith('REPLACE_');
+const supabase = SUPABASE_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 // ─── State ───
 let kcalTarget = 2533;
@@ -824,6 +825,11 @@ loadFromLocalStorage();
 renderAll();
 
 (async function initSupabase() {
+  if (!supabase) {
+    setSyncBadge('Bulut senkronu kapali (Supabase key eksik)');
+    updateAuthUI();
+    return;
+  }
   try {
     const { data: { session } } = await supabase.auth.getSession();
     if (session) {
@@ -1008,7 +1014,7 @@ Kullanıcı girişi: ${query}`;
 
   try {
     const fetchHeaders = { 'Content-Type': 'application/json' };
-    if (currentUser) {
+    if (currentUser && supabase) {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) fetchHeaders['Authorization'] = `Bearer ${session.access_token}`;
     }
@@ -1246,6 +1252,10 @@ function openAuthModal() {
     loggedOut.style.display = 'block';
     document.getElementById('authModalTitle').textContent = 'Giriş Yap';
   }
+  if (!supabase) {
+    document.getElementById('loginError').textContent = 'Supabase anahtari eksik. Once ayarlari tamamla.';
+    document.getElementById('regError').textContent = 'Supabase anahtari eksik. Once ayarlari tamamla.';
+  }
   document.getElementById('authModal').classList.add('open');
   document.body.style.overflow = 'hidden';
 }
@@ -1267,6 +1277,10 @@ function switchAuthTab(tab) {
 }
 
 async function signIn() {
+  if (!supabase) {
+    document.getElementById('loginError').textContent = 'Supabase ayari eksik.';
+    return;
+  }
   const email = document.getElementById('loginEmail').value.trim();
   const password = document.getElementById('loginPassword').value;
   const errEl = document.getElementById('loginError');
@@ -1279,6 +1293,10 @@ async function signIn() {
 }
 
 async function signUp() {
+  if (!supabase) {
+    document.getElementById('regError').textContent = 'Supabase ayari eksik.';
+    return;
+  }
   const email = document.getElementById('regEmail').value.trim();
   const password = document.getElementById('regPassword').value;
   const errEl = document.getElementById('regError');
@@ -1296,6 +1314,7 @@ async function signUp() {
 }
 
 async function signOut() {
+  if (!supabase) return;
   await supabase.auth.signOut();
   closeAuthModal();
 }
