@@ -60,12 +60,16 @@ export default async function handler(req, res) {
   }
 
   if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY && query) {
+    const logAuthHeader = authHeader.startsWith("Bearer ")
+      ? authHeader
+      : `Bearer ${process.env.SUPABASE_ANON_KEY}`;
+
     fetch(`${process.env.SUPABASE_URL}/rest/v1/queries`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         apikey: process.env.SUPABASE_ANON_KEY,
-        Authorization: `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+        Authorization: logAuthHeader,
         Prefer: "return=minimal",
       },
       body: JSON.stringify({ user_id: userId, query }),
