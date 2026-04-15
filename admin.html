@@ -124,7 +124,8 @@
 const SUPABASE_URL = 'https://jeesrtujrmlcefjbjipd.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_DRC-fs5aKfdW1fgC06bftA_zEPWIqIG';
 const ADMIN_EMAIL = 'sedatulubaba@gmail.com';
-const SUPABASE_CONFIGURED = SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.startsWith('REPLACE_');
+const SUPABASE_SDK_READY = !!(window.supabase && typeof window.supabase.createClient === 'function');
+const SUPABASE_CONFIGURED = SUPABASE_SDK_READY && SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.startsWith('REPLACE_');
 const supabase = SUPABASE_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 (async function() {
