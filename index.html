@@ -374,18 +374,18 @@
     background: rgba(0,0,0,0.7);
     backdrop-filter: blur(4px);
     z-index: 100;
-    display: flex;
+    display: none;
     align-items: flex-start;
     justify-content: center;
     padding: 1rem;
     overflow-y: auto;
     opacity: 0;
-    pointer-events: none;
     transition: opacity 0.2s;
   }
+  .modal-overlay[hidden] { display: none !important; }
   .modal-overlay.open {
+    display: flex;
     opacity: 1;
-    pointer-events: all;
   }
 
   .modal-content {
@@ -678,7 +678,7 @@
 </div>
 
 <!-- ───── SETTINGS MODAL ───── -->
-<div class="modal-overlay" id="settingsModal" onclick="handleSettingsOverlayClick(event)">
+<div class="modal-overlay" id="settingsModal" onclick="handleSettingsOverlayClick(event)" hidden>
   <div class="modal-content" onclick="event.stopPropagation()">
     <div class="modal-header">
       <div class="modal-title">Kişisel Hedefler</div>
@@ -705,7 +705,7 @@
 </div>
 
 <!-- ───── MODAL ───── -->
-<div class="modal-overlay" id="calModal" onclick="handleOverlayClick(event)">
+<div class="modal-overlay" id="calModal" onclick="handleOverlayClick(event)" hidden>
   <div class="modal-content" onclick="event.stopPropagation()">
     <div class="modal-header">
       <div class="modal-title">Geçmiş</div>
@@ -722,7 +722,7 @@
 </div>
 
 <!-- ───── AUTH MODAL ───── -->
-<div class="modal-overlay" id="authModal" onclick="handleAuthOverlayClick(event)">
+<div class="modal-overlay" id="authModal" onclick="handleAuthOverlayClick(event)" hidden>
   <div class="modal-content" onclick="event.stopPropagation()">
     <div class="modal-header">
       <div class="modal-title" id="authModalTitle">Giriş Yap</div>
@@ -766,7 +766,7 @@ const SUPABASE_ANON_KEY = 'sb_publishable_DRC-fs5aKfdW1fgC06bftA_zEPWIqIG';
 const ADMIN_EMAIL = 'sedatulubaba@gmail.com';
 const SUPABASE_SDK_READY = !!(window.supabase && typeof window.supabase.createClient === 'function');
 const SUPABASE_CONFIGURED = SUPABASE_SDK_READY && SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.startsWith('REPLACE_');
-const supabase = SUPABASE_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+const supabaseClient = SUPABASE_CONFIGURED ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
 
 // ─── State ───
 let kcalTarget = 2533;
@@ -794,7 +794,7 @@ function saveData() {
 // ─── Supabase data ───
 async function loadFromSupabase() {
   setSyncBadge('Buluttan yükleniyor...');
-  const { data: goalsData } = await supabase
+  const { data: goalsData } = await supabaseClient
     .from('user_goals').select('kcal, protein')
     .eq('user_id', currentUser.id).single();
   if (goalsData) {
@@ -804,7 +804,7 @@ async function loadFromSupabase() {
   }
   const since = new Date();
   since.setDate(since.getDate() - 30);
-  const { data: logs } = await supabase
+  const { data: logs } = await supabaseClient
     .from('food_logs').select('id, date, name, kcal, protein')
     .eq('user_id', currentUser.id)
     .gte('date', since.toISOString().split('T')[0])
@@ -824,22 +824,29 @@ async function loadFromSupabase() {
 // ─── Init ───
 loadFromLocalStorage();
 renderAll();
+['settingsModal', 'calModal', 'authModal'].forEach(id => {
+  const m = document.getElementById(id);
+  if (m) {
+    m.classList.remove('open');
+    m.hidden = true;
+  }
+});
 
 (async function initSupabase() {
-  if (!supabase) {
+  if (!supabaseClient) {
     setSyncBadge('Bulut senkronu kapali (Supabase key eksik)');
     updateAuthUI();
     return;
   }
   try {
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { session } } = await supabaseClient.auth.getSession();
     if (session) {
       currentUser = session.user;
       await loadFromSupabase();
       renderAll();
     }
     updateAuthUI();
-    supabase.auth.onAuthStateChange(async (event, session) => {
+    supabaseClient.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN') {
         currentUser = session.user;
         await loadFromSupabase();
@@ -981,7 +988,7 @@ async function removeFood(idx) {
   if (!allData[currentDate]) return;
   const item = allData[currentDate][idx];
   if (currentUser && item.id) {
-    const { error } = await supabase.from('food_logs')
+    const { error } = await supabaseClient.from('food_logs')
       .delete().eq('id', item.id).eq('user_id', currentUser.id);
     if (error) { console.error('Delete error:', error); return; }
   }
@@ -1015,8 +1022,8 @@ Kullanıcı girişi: ${query}`;
 
   try {
     const fetchHeaders = { 'Content-Type': 'application/json' };
-    if (currentUser && supabase) {
-      const { data: { session } } = await supabase.auth.getSession();
+    if (currentUser && supabaseClient) {
+      const { data: { session } } = await supabaseClient.auth.getSession();
       if (session) fetchHeaders['Authorization'] = `Bearer ${session.access_token}`;
     }
     const response = await fetch('/api/chat', {
@@ -1059,7 +1066,7 @@ Kullanıcı girişi: ${query}`;
 
     if (currentUser) {
       setSyncBadge('Kaydediliyor...');
-      const { data: insertData, error: insertError } = await supabase
+      const { data: insertData, error: insertError } = await supabaseClient
         .from('food_logs').insert({
           user_id: currentUser.id,
           date: currentDate,
@@ -1095,12 +1102,16 @@ function openSettings() {
   document.getElementById('goalKcal').value = kcalTarget;
   document.getElementById('goalProtein').value = proteinTarget;
   document.getElementById('saveSuccess').textContent = '';
-  document.getElementById('settingsModal').classList.add('open');
+  const modal = document.getElementById('settingsModal');
+  modal.hidden = false;
+  modal.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
 function closeSettings() {
-  document.getElementById('settingsModal').classList.remove('open');
+  const modal = document.getElementById('settingsModal');
+  modal.classList.remove('open');
+  modal.hidden = true;
   document.body.style.overflow = '';
 }
 
@@ -1111,12 +1122,16 @@ function handleSettingsOverlayClick(e) {
 // ─── Calendar Modal ───
 function openModal() {
   renderHistoryList();
-  document.getElementById('calModal').classList.add('open');
+  const modal = document.getElementById('calModal');
+  modal.hidden = false;
+  modal.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
 function closeModal() {
-  document.getElementById('calModal').classList.remove('open');
+  const modal = document.getElementById('calModal');
+  modal.classList.remove('open');
+  modal.hidden = true;
   document.body.style.overflow = '';
 }
 
@@ -1151,7 +1166,7 @@ function saveGoals() {
   localStorage.setItem('kalorai_goals', JSON.stringify({ kcal: kcalTarget, protein: proteinTarget }));
 
   if (currentUser) {
-    supabase.from('user_goals').upsert({
+    supabaseClient.from('user_goals').upsert({
       user_id: currentUser.id, kcal: kcalTarget, protein: proteinTarget,
       updated_at: new Date().toISOString()
     }, { onConflict: 'user_id' }).then(({ error }) => {
@@ -1253,16 +1268,20 @@ function openAuthModal() {
     loggedOut.style.display = 'block';
     document.getElementById('authModalTitle').textContent = 'Giriş Yap';
   }
-  if (!supabase) {
+  if (!supabaseClient) {
     document.getElementById('loginError').textContent = 'Supabase anahtari eksik. Once ayarlari tamamla.';
     document.getElementById('regError').textContent = 'Supabase anahtari eksik. Once ayarlari tamamla.';
   }
-  document.getElementById('authModal').classList.add('open');
+  const modal = document.getElementById('authModal');
+  modal.hidden = false;
+  modal.classList.add('open');
   document.body.style.overflow = 'hidden';
 }
 
 function closeAuthModal() {
-  document.getElementById('authModal').classList.remove('open');
+  const modal = document.getElementById('authModal');
+  modal.classList.remove('open');
+  modal.hidden = true;
   document.body.style.overflow = '';
 }
 
@@ -1278,7 +1297,7 @@ function switchAuthTab(tab) {
 }
 
 async function signIn() {
-  if (!supabase) {
+  if (!supabaseClient) {
     document.getElementById('loginError').textContent = 'Supabase ayari eksik.';
     return;
   }
@@ -1288,13 +1307,13 @@ async function signIn() {
   const btn = document.getElementById('loginBtn');
   errEl.textContent = '';
   btn.disabled = true;
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
   if (error) errEl.textContent = error.message;
   btn.disabled = false;
 }
 
 async function signUp() {
-  if (!supabase) {
+  if (!supabaseClient) {
     document.getElementById('regError').textContent = 'Supabase ayari eksik.';
     return;
   }
@@ -1305,7 +1324,7 @@ async function signUp() {
   const btn = document.getElementById('registerBtn');
   errEl.textContent = ''; succEl.textContent = '';
   btn.disabled = true;
-  const { error } = await supabase.auth.signUp({ email, password });
+  const { error } = await supabaseClient.auth.signUp({ email, password });
   if (error) {
     errEl.textContent = error.message;
   } else {
@@ -1315,8 +1334,8 @@ async function signUp() {
 }
 
 async function signOut() {
-  if (!supabase) return;
-  await supabase.auth.signOut();
+  if (!supabaseClient) return;
+  await supabaseClient.auth.signOut();
   closeAuthModal();
 }
 </script>
