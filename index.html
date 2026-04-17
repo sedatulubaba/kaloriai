@@ -378,12 +378,16 @@
     margin-top: 8px;
     min-height: 16px;
   }
+  .quota-note.vip-alert {
+    color: #ffd86b;
+    text-shadow: 0 0 8px rgba(255, 216, 107, 0.35);
+  }
   .vip-btn {
     margin-top: 8px;
     width: 100%;
-    background: transparent;
-    color: var(--text);
-    border: 1px solid var(--border);
+    background: linear-gradient(135deg, #2a2111 0%, #1a160f 100%);
+    color: #ffe6a0;
+    border: 1px solid #7a6430;
     border-radius: 0;
     padding: 10px;
     font-family: 'Enzia', sans-serif;
@@ -392,11 +396,40 @@
     cursor: pointer;
     transition: none;
     display: none;
+    position: relative;
+    overflow: hidden;
   }
   .vip-btn:hover {
-    background: transparent;
-    color: var(--text);
-    border-color: var(--border);
+    background: linear-gradient(135deg, #332914 0%, #211b11 100%);
+    color: #ffe9b8;
+    border-color: #9d8240;
+  }
+  .vip-btn.vip-active {
+    animation: vipPulse 1.8s ease-in-out infinite;
+  }
+  .vip-btn.vip-active::after {
+    content: '';
+    position: absolute;
+    top: -120%;
+    left: -30%;
+    width: 24%;
+    height: 320%;
+    background: linear-gradient(180deg, rgba(255,255,255,0), rgba(255,243,193,0.5), rgba(255,255,255,0));
+    transform: rotate(18deg);
+    animation: vipShine 2.2s linear infinite;
+  }
+  .vip-btn .vip-crown {
+    margin-right: 6px;
+    display: inline-block;
+    filter: drop-shadow(0 0 5px rgba(255, 214, 102, 0.45));
+  }
+  @keyframes vipPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(255, 214, 102, 0.15); }
+    50% { box-shadow: 0 0 0 3px rgba(255, 214, 102, 0.32); }
+  }
+  @keyframes vipShine {
+    0% { left: -40%; }
+    100% { left: 130%; }
   }
 
   /* ───── MODAL ───── */
@@ -703,7 +736,7 @@
     <div class="thinking" id="thinkingMsg"></div>
     <div class="error-msg" id="errorMsg"></div>
     <div class="quota-note" id="quotaStatus"></div>
-    <button class="vip-btn" id="vipBtn" onclick="requestVipMembership()">VIP Üyelik İste</button>
+    <button class="vip-btn" id="vipBtn" onclick="requestVipMembership()"><span class="vip-crown">👑</span><span id="vipBtnText">VIP Üyelik İste</span></button>
   </div>
 
   <div class="food-list-section">
@@ -906,7 +939,10 @@ function formatRemainingTime(cooldownUntil) {
 function renderQuotaUI() {
   const quotaEl = document.getElementById('quotaStatus');
   const vipBtn = document.getElementById('vipBtn');
-  if (!quotaEl || !vipBtn) return;
+  const vipBtnText = document.getElementById('vipBtnText');
+  if (!quotaEl || !vipBtn || !vipBtnText) return;
+  quotaEl.classList.remove('vip-alert');
+  vipBtn.classList.remove('vip-active');
 
   if (quotaState.isVip) {
     quotaEl.textContent = 'VIP aktif: sınırsız yemek ekleme hakkın var.';
@@ -918,16 +954,18 @@ function renderQuotaUI() {
   if (quotaState.allowed) {
     quotaEl.textContent = `Ücretsiz hak: ${quotaState.remainingFree} / ${FREE_ADD_LIMIT}`;
     quotaEl.style.color = 'var(--muted)';
-    vipBtn.style.display = quotaState.remainingFree === 0 ? 'block' : 'none';
-    vipBtn.textContent = currentUser ? 'VIP Üyelik İste' : 'VIP için Giriş Yap';
+    vipBtn.style.display = 'none';
+    vipBtnText.textContent = currentUser ? 'VIP Üyelik İste' : 'VIP için Giriş Yap';
     return;
   }
 
   const left = formatRemainingTime(quotaState.cooldownUntil);
   quotaEl.textContent = `Limit doldu. ${left} sonra tekrar deneyebilirsin. Beklemek istemiyorsan VIP iste.`;
-  quotaEl.style.color = 'var(--danger)';
+  quotaEl.style.color = '#ffd86b';
+  quotaEl.classList.add('vip-alert');
   vipBtn.style.display = 'block';
-  vipBtn.textContent = currentUser ? 'VIP Üyelik İste' : 'VIP için Giriş Yap';
+  vipBtn.classList.add('vip-active');
+  vipBtnText.textContent = currentUser ? 'VIP Üyelik İste' : 'VIP için Giriş Yap';
 }
 
 async function refreshQuotaState() {
@@ -975,7 +1013,15 @@ async function consumeFoodAddQuota() {
     next.cooldownUntil = new Date(Date.now() + FREE_COOLDOWN_HOURS * 60 * 60 * 1000).toISOString();
   }
   saveGuestQuotaRaw(next);
-  quotaState = normalizeGuestQuota(next);
+  // 2. ekleme başarılı olsun; 3. denemede cooldown kilidi devreye girsin.
+  quotaState = {
+    allowed: true,
+    isVip: false,
+    remainingFree: Math.max(0, FREE_ADD_LIMIT - nextUsed),
+    cooldownUntil: next.cooldownUntil,
+    reason: 'free',
+    source: 'guest'
+  };
   renderQuotaUI();
   return quotaState;
 }
