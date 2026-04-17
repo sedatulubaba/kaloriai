@@ -372,6 +372,32 @@
     color: var(--danger);
     margin-top: 8px;
   }
+  .quota-note {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 8px;
+    min-height: 16px;
+  }
+  .vip-btn {
+    margin-top: 8px;
+    width: 100%;
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 0;
+    padding: 10px;
+    font-family: 'Enzia', sans-serif;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    transition: none;
+    display: none;
+  }
+  .vip-btn:hover {
+    background: transparent;
+    color: var(--text);
+    border-color: var(--border);
+  }
 
   /* ───── MODAL ───── */
   .modal-overlay {
@@ -676,6 +702,8 @@
     </div>
     <div class="thinking" id="thinkingMsg"></div>
     <div class="error-msg" id="errorMsg"></div>
+    <div class="quota-note" id="quotaStatus"></div>
+    <button class="vip-btn" id="vipBtn" onclick="requestVipMembership()">VIP Üyelik İste</button>
   </div>
 
   <div class="food-list-section">
@@ -748,22 +776,14 @@
         <button class="save-goals-btn" onclick="signOut()">Çıkış Yap</button>
       </div>
       <div id="authLoggedOut">
-        <div class="auth-tab-row">
-          <button class="auth-tab active" id="tabLogin" onclick="switchAuthTab('login')">Giriş Yap</button>
-          <button class="auth-tab" id="tabRegister" onclick="switchAuthTab('register')">Kayıt Ol</button>
-        </div>
         <div id="formLogin">
           <div class="auth-field"><label>E-posta</label><input class="auth-input" id="loginEmail" type="email" placeholder="ornek@email.com" autocomplete="email" /></div>
           <div class="auth-field"><label>Şifre</label><input class="auth-input" id="loginPassword" type="password" placeholder="••••••••" autocomplete="current-password" /></div>
           <button class="auth-submit-btn" id="loginBtn" onclick="signIn()">Giriş Yap</button>
           <div class="auth-error" id="loginError"></div>
         </div>
-        <div id="formRegister" style="display:none">
-          <div class="auth-field"><label>E-posta</label><input class="auth-input" id="regEmail" type="email" placeholder="ornek@email.com" autocomplete="email" /></div>
-          <div class="auth-field"><label>Şifre (en az 6 karakter)</label><input class="auth-input" id="regPassword" type="password" placeholder="••••••••" autocomplete="new-password" /></div>
-          <button class="auth-submit-btn" id="registerBtn" onclick="signUp()">Kayıt Ol</button>
-          <div class="auth-error" id="regError"></div>
-          <div class="auth-success" id="regSuccess"></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:10px">
+          Yeni hesap ve VIP için benimle iletişime geçin.
         </div>
       </div>
     </div>
@@ -786,6 +806,17 @@ let proteinTarget = 127;
 let allData = {};
 let currentDate = todayKey();
 let currentUser = null;
+const FREE_ADD_LIMIT = 2;
+const FREE_COOLDOWN_HOURS = 10;
+const GUEST_QUOTA_KEY = 'kalorai_guest_quota_v1';
+let quotaState = {
+  allowed: true,
+  isVip: false,
+  remainingFree: FREE_ADD_LIMIT,
+  cooldownUntil: null,
+  reason: 'free',
+  source: 'guest'
+};
 
 // ─── localStorage helpers ───
 function loadFromLocalStorage() {
@@ -801,6 +832,174 @@ function loadFromLocalStorage() {
 
 function saveData() {
   localStorage.setItem('kalorai_data', JSON.stringify(allData));
+}
+
+function parseQuotaPayload(payload) {
+  if (!payload) return null;
+  const raw = Array.isArray(payload) ? payload[0] : payload;
+  if (!raw || typeof raw !== 'object') return null;
+  return {
+    allowed: !!raw.allowed,
+    isVip: !!raw.is_vip,
+    remainingFree: Number.isFinite(Number(raw.remaining_free)) ? Number(raw.remaining_free) : 0,
+    cooldownUntil: raw.cooldown_until || null,
+    reason: raw.reason || 'free',
+    source: 'database'
+  };
+}
+
+function loadGuestQuotaRaw() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(GUEST_QUOTA_KEY) || '{}');
+    return {
+      usedCount: Number.isFinite(raw.usedCount) ? raw.usedCount : 0,
+      cooldownUntil: raw.cooldownUntil || null
+    };
+  } catch (_) {
+    return { usedCount: 0, cooldownUntil: null };
+  }
+}
+
+function saveGuestQuotaRaw(data) {
+  localStorage.setItem(GUEST_QUOTA_KEY, JSON.stringify(data));
+}
+
+function normalizeGuestQuota(raw) {
+  const now = Date.now();
+  const cooldownMs = raw.cooldownUntil ? new Date(raw.cooldownUntil).getTime() - now : 0;
+  if (cooldownMs > 0) {
+    return {
+      allowed: false,
+      isVip: false,
+      remainingFree: 0,
+      cooldownUntil: raw.cooldownUntil,
+      reason: 'cooldown',
+      source: 'guest'
+    };
+  }
+  if (raw.cooldownUntil && cooldownMs <= 0) {
+    raw = { usedCount: 0, cooldownUntil: null };
+    saveGuestQuotaRaw(raw);
+  }
+  const used = Math.max(0, Math.min(FREE_ADD_LIMIT, raw.usedCount || 0));
+  return {
+    allowed: true,
+    isVip: false,
+    remainingFree: Math.max(0, FREE_ADD_LIMIT - used),
+    cooldownUntil: null,
+    reason: 'free',
+    source: 'guest'
+  };
+}
+
+function formatRemainingTime(cooldownUntil) {
+  if (!cooldownUntil) return '';
+  const remainingMs = new Date(cooldownUntil).getTime() - Date.now();
+  if (remainingMs <= 0) return '0 dk';
+  const totalMinutes = Math.ceil(remainingMs / 60000);
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  if (hours <= 0) return `${minutes} dk`;
+  return `${hours} sa ${minutes} dk`;
+}
+
+function renderQuotaUI() {
+  const quotaEl = document.getElementById('quotaStatus');
+  const vipBtn = document.getElementById('vipBtn');
+  if (!quotaEl || !vipBtn) return;
+
+  if (quotaState.isVip) {
+    quotaEl.textContent = 'VIP aktif: sınırsız yemek ekleme hakkın var.';
+    quotaEl.style.color = 'var(--accent)';
+    vipBtn.style.display = 'none';
+    return;
+  }
+
+  if (quotaState.allowed) {
+    quotaEl.textContent = `Ücretsiz hak: ${quotaState.remainingFree} / ${FREE_ADD_LIMIT}`;
+    quotaEl.style.color = 'var(--muted)';
+    vipBtn.style.display = quotaState.remainingFree === 0 ? 'block' : 'none';
+    vipBtn.textContent = currentUser ? 'VIP Üyelik İste' : 'VIP için Giriş Yap';
+    return;
+  }
+
+  const left = formatRemainingTime(quotaState.cooldownUntil);
+  quotaEl.textContent = `Limit doldu. ${left} sonra tekrar deneyebilirsin. Beklemek istemiyorsan VIP iste.`;
+  quotaEl.style.color = 'var(--danger)';
+  vipBtn.style.display = 'block';
+  vipBtn.textContent = currentUser ? 'VIP Üyelik İste' : 'VIP için Giriş Yap';
+}
+
+async function refreshQuotaState() {
+  if (currentUser && supabaseClient) {
+    const { data, error } = await supabaseClient.rpc('get_food_add_quota_status');
+    if (!error) {
+      const parsed = parseQuotaPayload(data);
+      if (parsed) {
+        quotaState = parsed;
+        renderQuotaUI();
+        return;
+      }
+    }
+    quotaState = normalizeGuestQuota(loadGuestQuotaRaw());
+  } else {
+    quotaState = normalizeGuestQuota(loadGuestQuotaRaw());
+  }
+  renderQuotaUI();
+}
+
+async function consumeFoodAddQuota() {
+  if (currentUser && supabaseClient) {
+    const { data, error } = await supabaseClient.rpc('consume_food_add_quota');
+    if (!error) {
+      const parsed = parseQuotaPayload(data);
+      if (parsed) {
+        quotaState = parsed;
+        renderQuotaUI();
+        return parsed;
+      }
+    }
+  }
+
+  const raw = loadGuestQuotaRaw();
+  const normalized = normalizeGuestQuota(raw);
+  if (!normalized.allowed) {
+    quotaState = normalized;
+    renderQuotaUI();
+    return normalized;
+  }
+
+  const nextUsed = Math.min(FREE_ADD_LIMIT, (raw.usedCount || 0) + 1);
+  const next = { usedCount: nextUsed, cooldownUntil: null };
+  if (nextUsed >= FREE_ADD_LIMIT) {
+    next.cooldownUntil = new Date(Date.now() + FREE_COOLDOWN_HOURS * 60 * 60 * 1000).toISOString();
+  }
+  saveGuestQuotaRaw(next);
+  quotaState = normalizeGuestQuota(next);
+  renderQuotaUI();
+  return quotaState;
+}
+
+async function requestVipMembership() {
+  const errorEl = document.getElementById('errorMsg');
+  if (!currentUser) {
+    openAuthModal();
+    errorEl.textContent = 'VIP isteği için önce giriş yapman gerekiyor.';
+    return;
+  }
+  const { data, error } = await supabaseClient.rpc('request_vip_upgrade');
+  if (error) {
+    errorEl.textContent = 'VIP isteği gönderilemedi. Lütfen tekrar dene.';
+    return;
+  }
+  const result = Array.isArray(data) ? data[0] : data;
+  if (result && result.status === 'already_vip') {
+    errorEl.textContent = 'Hesabın zaten VIP.';
+    return;
+  }
+  errorEl.textContent = result && result.status === 'already_pending'
+    ? 'VIP isteğin zaten beklemede.'
+    : 'VIP isteğin alındı. Kısa süre içinde dönüş yapılacak.';
 }
 
 // ─── Supabase data ───
@@ -848,6 +1047,7 @@ renderAll();
   if (!supabaseClient) {
     setSyncBadge('Bulut senkronu kapali (Supabase key eksik)');
     updateAuthUI();
+    await refreshQuotaState();
     return;
   }
   try {
@@ -855,19 +1055,23 @@ renderAll();
     if (session) {
       currentUser = session.user;
       await loadFromSupabase();
+      await refreshQuotaState();
       renderAll();
     }
     updateAuthUI();
+    await refreshQuotaState();
     supabaseClient.auth.onAuthStateChange(async (event, session) => {
       if (event === 'SIGNED_IN') {
         currentUser = session.user;
         await loadFromSupabase();
+        await refreshQuotaState();
         renderAll();
         updateAuthUI();
         closeAuthModal();
       } else if (event === 'SIGNED_OUT') {
         currentUser = null;
         loadFromLocalStorage();
+        await refreshQuotaState();
         renderAll();
         updateAuthUI();
       }
@@ -1073,6 +1277,15 @@ Kullanıcı girişi: ${query}`;
       return;
     }
 
+    const quota = await consumeFoodAddQuota();
+    if (!quota.allowed) {
+      thinking.innerHTML = '';
+      errorEl.textContent = 'Ücretsiz hakkın doldu. Bekleyebilir ya da VIP üyelik isteyebilirsin.';
+      btn.disabled = false;
+      input.focus();
+      return;
+    }
+
     if (!allData[currentDate]) allData[currentDate] = [];
     allData[currentDate].push({ name: parsed.name, kcal, protein });
 
@@ -1108,6 +1321,16 @@ Kullanıcı girişi: ${query}`;
 document.getElementById('foodInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') addFood();
 });
+
+setInterval(() => {
+  if (!quotaState.cooldownUntil) return;
+  const remaining = new Date(quotaState.cooldownUntil).getTime() - Date.now();
+  if (remaining <= 0) {
+    refreshQuotaState().catch(() => {});
+    return;
+  }
+  renderQuotaUI();
+}, 30000);
 
 // ─── Settings Modal ───
 function openSettings() {
@@ -1282,7 +1505,6 @@ function openAuthModal() {
   }
   if (!supabaseClient) {
     document.getElementById('loginError').textContent = 'Supabase anahtari eksik. Once ayarlari tamamla.';
-    document.getElementById('regError').textContent = 'Supabase anahtari eksik. Once ayarlari tamamla.';
   }
   const modal = document.getElementById('authModal');
   modal.hidden = false;
@@ -1301,13 +1523,6 @@ function handleAuthOverlayClick(e) {
   if (e.target === document.getElementById('authModal')) closeAuthModal();
 }
 
-function switchAuthTab(tab) {
-  document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
-  document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
-  document.getElementById('formLogin').style.display = tab === 'login' ? 'block' : 'none';
-  document.getElementById('formRegister').style.display = tab === 'register' ? 'block' : 'none';
-}
-
 async function signIn() {
   if (!supabaseClient) {
     document.getElementById('loginError').textContent = 'Supabase ayari eksik.';
@@ -1321,27 +1536,6 @@ async function signIn() {
   btn.disabled = true;
   const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
   if (error) errEl.textContent = error.message;
-  btn.disabled = false;
-}
-
-async function signUp() {
-  if (!supabaseClient) {
-    document.getElementById('regError').textContent = 'Supabase ayari eksik.';
-    return;
-  }
-  const email = document.getElementById('regEmail').value.trim();
-  const password = document.getElementById('regPassword').value;
-  const errEl = document.getElementById('regError');
-  const succEl = document.getElementById('regSuccess');
-  const btn = document.getElementById('registerBtn');
-  errEl.textContent = ''; succEl.textContent = '';
-  btn.disabled = true;
-  const { error } = await supabaseClient.auth.signUp({ email, password });
-  if (error) {
-    errEl.textContent = error.message;
-  } else {
-    succEl.textContent = 'Onay e-postası gönderildi! E-postanızı kontrol edin.';
-  }
   btn.disabled = false;
 }
 
