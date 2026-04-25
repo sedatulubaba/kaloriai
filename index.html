@@ -839,16 +839,13 @@ let proteinTarget = 127;
 let allData = {};
 let currentDate = todayKey();
 let currentUser = null;
-const FREE_ADD_LIMIT = 2;
-const FREE_COOLDOWN_HOURS = 10;
-const GUEST_QUOTA_KEY = 'kalorai_guest_quota_v1';
 let quotaState = {
   allowed: true,
-  isVip: false,
-  remainingFree: FREE_ADD_LIMIT,
+  isVip: true,
+  remainingFree: Infinity,
   cooldownUntil: null,
-  reason: 'free',
-  source: 'guest'
+  reason: 'unlimited',
+  source: 'local'
 };
 
 // ─── localStorage helpers ───
@@ -939,88 +936,32 @@ function formatRemainingTime(cooldownUntil) {
 function renderQuotaUI() {
   const quotaEl = document.getElementById('quotaStatus');
   const vipBtn = document.getElementById('vipBtn');
-  const vipBtnText = document.getElementById('vipBtnText');
-  if (!quotaEl || !vipBtn || !vipBtnText) return;
-  quotaEl.classList.remove('vip-alert');
-  vipBtn.classList.remove('vip-active');
-
-  if (quotaState.isVip) {
-    quotaEl.textContent = 'VIP aktif: sınırsız yemek ekleme hakkın var.';
-    quotaEl.style.color = 'var(--accent)';
-    vipBtn.style.display = 'none';
-    return;
-  }
-
-  if (quotaState.allowed) {
-    quotaEl.textContent = `Ücretsiz hak: ${quotaState.remainingFree} / ${FREE_ADD_LIMIT}`;
-    quotaEl.style.color = 'var(--muted)';
-    vipBtn.style.display = 'none';
-    vipBtnText.textContent = currentUser ? 'VIP Üyelik İste' : 'VIP için Giriş Yap';
-    return;
-  }
-
-  const left = formatRemainingTime(quotaState.cooldownUntil);
-  quotaEl.textContent = `Limit doldu. ${left} sonra tekrar deneyebilirsin. Beklemek istemiyorsan VIP iste.`;
-  quotaEl.style.color = '#ffd86b';
-  quotaEl.classList.add('vip-alert');
-  vipBtn.style.display = 'block';
-  vipBtn.classList.add('vip-active');
-  vipBtnText.textContent = currentUser ? 'VIP Üyelik İste' : 'VIP için Giriş Yap';
+  if (!quotaEl || !vipBtn) return;
+  quotaEl.textContent = '';
+  quotaEl.style.display = 'none';
+  vipBtn.style.display = 'none';
 }
 
 async function refreshQuotaState() {
-  if (currentUser && supabaseClient) {
-    const { data, error } = await supabaseClient.rpc('get_food_add_quota_status');
-    if (!error) {
-      const parsed = parseQuotaPayload(data);
-      if (parsed) {
-        quotaState = parsed;
-        renderQuotaUI();
-        return;
-      }
-    }
-    quotaState = normalizeGuestQuota(loadGuestQuotaRaw());
-  } else {
-    quotaState = normalizeGuestQuota(loadGuestQuotaRaw());
-  }
+  quotaState = {
+    allowed: true,
+    isVip: true,
+    remainingFree: Infinity,
+    cooldownUntil: null,
+    reason: 'unlimited',
+    source: 'local'
+  };
   renderQuotaUI();
 }
 
 async function consumeFoodAddQuota() {
-  if (currentUser && supabaseClient) {
-    const { data, error } = await supabaseClient.rpc('consume_food_add_quota');
-    if (!error) {
-      const parsed = parseQuotaPayload(data);
-      if (parsed) {
-        quotaState = parsed;
-        renderQuotaUI();
-        return parsed;
-      }
-    }
-  }
-
-  const raw = loadGuestQuotaRaw();
-  const normalized = normalizeGuestQuota(raw);
-  if (!normalized.allowed) {
-    quotaState = normalized;
-    renderQuotaUI();
-    return normalized;
-  }
-
-  const nextUsed = Math.min(FREE_ADD_LIMIT, (raw.usedCount || 0) + 1);
-  const next = { usedCount: nextUsed, cooldownUntil: null };
-  if (nextUsed >= FREE_ADD_LIMIT) {
-    next.cooldownUntil = new Date(Date.now() + FREE_COOLDOWN_HOURS * 60 * 60 * 1000).toISOString();
-  }
-  saveGuestQuotaRaw(next);
-  // 2. ekleme başarılı olsun; 3. denemede cooldown kilidi devreye girsin.
   quotaState = {
     allowed: true,
-    isVip: false,
-    remainingFree: Math.max(0, FREE_ADD_LIMIT - nextUsed),
-    cooldownUntil: next.cooldownUntil,
-    reason: 'free',
-    source: 'guest'
+    isVip: true,
+    remainingFree: Infinity,
+    cooldownUntil: null,
+    reason: 'unlimited',
+    source: 'local'
   };
   renderQuotaUI();
   return quotaState;
@@ -1326,7 +1267,7 @@ Kullanıcı girişi: ${query}`;
     const quota = await consumeFoodAddQuota();
     if (!quota.allowed) {
       thinking.innerHTML = '';
-      errorEl.textContent = 'Ücretsiz hakkın doldu. Bekleyebilir ya da VIP üyelik isteyebilirsin.';
+      errorEl.textContent = 'Yemek ekleme işlemi şu an yapılamadı. Lütfen tekrar dene.';
       btn.disabled = false;
       input.focus();
       return;
